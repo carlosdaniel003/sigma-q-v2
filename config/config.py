@@ -1,24 +1,21 @@
 """
-Arquivo de exemplo de configuração do SIGMA-Q v2.
-Copie este arquivo para config.py e ajuste os valores conforme o ambiente.
+Configurações do SIGMA-Q v2 (arquivo real).
+Não commit: ajustar locais sensíveis conforme ambiente.
 """
 
-# Diretórios de dados
-DATA_RAW_DIR = "data/raw"
-DATA_PROCESSED_DIR = "data/processed"
-BASE_UNIFICADA = "data/processed/base_de_dados_unificada.xlsx"
+from pathlib import Path
 
-# Diretórios de modelos
-MODEL_DIR = "model"
-MODEL_FILE = f"{MODEL_DIR}/modelo_classificacao.pkl"
-VECTORIZER_FILE = f"{MODEL_DIR}/vectorizer.pkl"
+BASE_DIR = Path(__file__).resolve().parents[1]
 
-# Parâmetros de criticidade (ajustáveis)
-CRITICIDADE_PESOS = {
-    "frequencia": 0.5,
-    "gravidade": 0.3,
-    "tendencia": 0.2
-}
+# Diretórios
+DATA_RAW_DIR = BASE_DIR / "data" / "raw"
+DATA_PROCESSED_DIR = BASE_DIR / "data" / "processed"
+BASE_UNIFICADA = DATA_PROCESSED_DIR / "base_de_dados_unificada.xlsx"
 
-# Configuração geral
-LOG_DIR = "data/logs"
+# Nomes de arquivos de entrada esperados
+FILE_PRODUCAO = DATA_RAW_DIR / "base_de_dados_prod.xlsx"
+FILE_DEFEITOS = DATA_RAW_DIR / "base_de_dados_defeitos.xls"
+
+# Parâmetros
+DATE_FORMATS = ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"]  # tentativa de parsing
+CRITICIDADE_PESOS = {"frequencia": 0.5, "gravidade": 0.3, "tendencia": 0.2}
