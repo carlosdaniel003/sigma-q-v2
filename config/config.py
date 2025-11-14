@@ -14,7 +14,7 @@ BASE_UNIFICADA = DATA_PROCESSED_DIR / "base_de_dados_unificada.xlsx"
 
 # Nomes de arquivos de entrada esperados
 FILE_PRODUCAO = DATA_RAW_DIR / "base_de_dados_prod.xlsx"
-FILE_DEFEITOS = DATA_RAW_DIR / "base_de_dados_defeitos.xls"
+FILE_DEFEITOS = DATA_RAW_DIR / "base_de_dados_defeitos.xlsx"
 
 # Parâmetros
 DATE_FORMATS = ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"]  # tentativa de parsing
