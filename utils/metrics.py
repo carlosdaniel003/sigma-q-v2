@@ -1,0 +1,13 @@
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+
+def compute_metrics(y_true, y_pred):
+    precision, recall, f1, _ = precision_recall_fscore_support(
+        y_true, y_pred, average="macro"
+    )
+
+    return {
+        "accuracy": accuracy_score(y_true, y_pred),
+        "precision_macro": precision,
+        "recall_macro": recall,
+        "f1_macro": f1
+    }

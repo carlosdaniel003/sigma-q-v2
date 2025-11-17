@@ -1,5 +1,25 @@
+# Python
 __pycache__/
-.venv/
 *.pyc
+
+# Streamlit
+app/.streamlit/
+logs/
+
+# Models
+models/
+model/spacy model/embeddings.npy
+model/spacy model/tfidf_matrix.npy
+model/spacy model/tfidf_vectorizer.pkl
+
+# Dados
 data/raw/
-data/processed/
+data/logs/
+data/processed/*.parquet
+
+# Ambiente
+.vscode/
+.env/
+*.venv/
+venv/
+ENV/

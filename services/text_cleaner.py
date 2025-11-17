@@ -36,8 +36,8 @@ def limpeza_basica(texto: str) -> str:
 
 # Palavras sem valor técnico
 STOPWORDS_TECNICAS = {
-    "DO", "DA", "DE", "UM", "UMA", "NO", "NA", "OS", "AS", 
-    "PARA", "COM", "SEM", "QUE", "EM"
+    "DO", "DA", "DE", "UM", "UMA", "NO", "OS", "AS", 
+    "PARA", "COM", "QUE", "EM"
 }
 
 

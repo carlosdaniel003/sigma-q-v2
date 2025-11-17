@@ -19,3 +19,12 @@ FILE_DEFEITOS = DATA_RAW_DIR / "base_de_dados_defeitos.xlsx"
 # Parâmetros
 DATE_FORMATS = ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"]  # tentativa de parsing
 CRITICIDADE_PESOS = {"frequencia": 0.5, "gravidade": 0.3, "tendencia": 0.2}
+
+BASE = Path(__file__).resolve().parent.parent
+
+PATH_DATA = BASE / "data"
+PATH_DATA_PROCESSED = PATH_DATA / "processed"
+
+PATH_SPACY_MODEL = BASE / "model" / "spacy model"
+
+PATH_MODELS = BASE / "models"

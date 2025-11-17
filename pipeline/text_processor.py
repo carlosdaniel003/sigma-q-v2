@@ -1,110 +1,68 @@
-"""
-pipeline/text_processor.py
+# pipeline/text_processor.py
+# SIGMA-Q V2 — Fase 2 completa (compatível com seu text_vectorizer.py)
 
-Responsabilidade:
-- Executar toda a pipeline de pré-processamento textual da Fase 2:
-    1. Limpeza textual
-    2. Normalização técnica
-    3. Geração de TEXTO_PROCESSADO
-    4. Persistência dos resultados
-
-- Não faz vetorização nem agrupamento (Fase 2.2 e 2.3)
-- Funciona totalmente independente da UI / Streamlit
-"""
-
+import logging
 import pandas as pd
-from pathlib import Path
+import numpy as np
+import joblib
 
+from config.config import PATH_DATA_PROCESSED, PATH_SPACY_MODEL
 from services.text_cleaner import clean_text
 from services.text_normalizer import normalizar_texto
+from services.text_vectorizer import embed_batch, gerar_tfidf
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(levelname)s — %(message)s")
+logger = logging.getLogger(__name__)
 
 
-# ============================================================
-# CONFIG
-# ============================================================
+def run():
+    logger.info("[Pipeline] Carregando base unificada...")
+    df = pd.read_parquet(PATH_DATA_PROCESSED / "base_final.parquet")
 
-BASE_PROCESSED = Path("data/processed/base_de_dados_unificada.xlsx")
-OUTPUT_FILE = Path("data/processed/texto_processado.parquet")
+    # ============================================================
+    #  TEXT CLEANING
+    # ============================================================
+    logger.info("[Pipeline] Limpando texto (TEXTO_LIMPO)...")
+    df["TEXTO_LIMPO"] = df["DESC_FALHA_CORR"].astype(str).apply(clean_text)
 
+    logger.info("[Pipeline] Normalizando texto (TEXTO_NORMALIZADO)...")
+    df["TEXTO_NORMALIZADO"] = df["TEXTO_LIMPO"].apply(normalizar_texto)
 
-# ============================================================
-# 1) Função que processa uma linha de texto
-# ============================================================
+    textos = df["TEXTO_NORMALIZADO"].astype(str).tolist()
 
-def processar_texto(texto: str) -> dict:
-    """
-    Retorna:
-    {
-        texto_limpo,
-        texto_normalizado,
-        texto_processado
-    }
-    """
-    texto_limpo = clean_text(texto)
-    texto_norm = normalizar_texto(texto)
+    # ============================================================
+    #  EMBEDDINGS (spaCy)
+    # ============================================================
+    logger.info("[Pipeline] Gerando embeddings spaCy (pode demorar)...")
+    embeddings = embed_batch(textos)
+    emb_path = PATH_SPACY_MODEL / "embeddings.npy"
+    np.save(emb_path, embeddings)
+    logger.info(f"[OK] Embeddings salvos em: {emb_path}")
 
-    # Aqui definimos como será o “texto final” da pipeline
-    texto_proc = texto_norm.strip()
+    # ============================================================
+    #  TF-IDF
+    # ============================================================
+    logger.info("[Pipeline] Gerando matriz TF-IDF...")
+    vectorizer, matriz_tfidf = gerar_tfidf(textos)
 
-    return {
-        "TEXTO_LIMPO": texto_limpo,
-        "TEXTO_NORMALIZADO": texto_norm,
-        "TEXTO_PROCESSADO": texto_proc
-    }
+    tfidf_vec_path = PATH_SPACY_MODEL / "tfidf_vectorizer.pkl"
+    tfidf_mat_path = PATH_SPACY_MODEL / "tfidf_matrix.npy"
 
+    joblib.dump(vectorizer, tfidf_vec_path)
+    logger.info(f"[OK] TF-IDF vectorizer salvo em: {tfidf_vec_path}")
 
-# ============================================================
-# 2) Pipeline principal aplicada ao DataFrame
-# ============================================================
+    np.save(tfidf_mat_path, matriz_tfidf)
+    logger.info(f"[OK] TF-IDF matrix salva em: {tfidf_mat_path}")
 
-def aplicar_pipeline(df: pd.DataFrame, coluna_desc="DESC_FALHA") -> pd.DataFrame:
-    """
-    Aplica limpeza + normalização + processamento final.
-    """
+    # ============================================================
+    #  Salvar o resultado em parquet
+    # ============================================================
+    out_path = PATH_DATA_PROCESSED / "texto_processado.parquet"
+    df.to_parquet(out_path, index=False)
 
-    print("[Pipeline] Processando coluna:", coluna_desc)
-
-    # garante que não quebra com NaN
-    textos = df[coluna_desc].fillna("").astype(str)
-
-    resultados = textos.apply(processar_texto).tolist()
-
-    # converte lista de dict → DataFrame
-    df_proc = pd.DataFrame(resultados)
-
-    # anexa ao original
-    df_out = pd.concat([df, df_proc], axis=1)
-
-    return df_out
+    logger.info("✔ Pipeline Fase 2 concluída com sucesso!")
+    logger.info(f"✔ Arquivo final salvo em: {out_path}")
 
 
-# ============================================================
-# 3) Função principal para executar tudo
-# ============================================================
-
-def executar_pipeline_textual():
-    """
-    Carrega base_unificada -> aplica pipeline -> salva parquet.
-    """
-    print("[Pipeline] Carregando base unificada...")
-    df = pd.read_excel(BASE_PROCESSED)
-
-    print("[Pipeline] Aplicando processamento textual...")
-    df = aplicar_pipeline(df, coluna_desc="DESC_FALHA")
-
-    print("[Pipeline] Salvando arquivo final...")
-    OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    # 🔒 Garantir que todas as colunas sejam strings (evita erros no parquet)
-    df = df.astype(str)
-
-    # salvar arquivo final
-    df.to_parquet(OUTPUT_FILE, index=False)
-
-
-    print("\n✔ Pipeline concluída!")
-    print("✔ Arquivo salvo em:", OUTPUT_FILE)
-
-
-# execução manual
 if __name__ == "__main__":
-    executar_pipeline_textual()
+    run()

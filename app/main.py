@@ -1,12 +1,46 @@
-"""
-Main do SIGMA-Q v2.
-Este arquivo apenas orquestra a interface (UI) e chama serviços.
-Nenhuma lógica pesada deve estar aqui.
-"""
+import streamlit as st
+from pathlib import Path
 
-def main():
-    print("SIGMA-Q v2 - Ambiente inicial configurado com sucesso.")
-    print("A interface será construída após a conclusão da IA.")
+# ---------------------------------------------------
+# Configuração Geral do SIGMA-Q V2
+# ---------------------------------------------------
+st.set_page_config(
+    page_title="SIGMA-Q V2",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-if __name__ == "__main__":
-    main()
+# ---------------------------------------------------
+# Carregar temas
+# ---------------------------------------------------
+with open("app/styles/base.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# ---------------------------------------------------
+# Sidebar padrão
+# ---------------------------------------------------
+st.sidebar.title("📘 SIGMA-Q V2")
+st.sidebar.write("Sistema de Inteligência para Gestão de Manufatura e Análise de Qualidade.")
+
+st.sidebar.markdown("---")
+st.sidebar.write("Navegação pelas páginas no menu superior ➜")
+
+
+# ---------------------------------------------------
+# Conteúdo Principal
+# ---------------------------------------------------
+st.title("SIGMA-Q V2")
+st.subheader("Ambiente Principal")
+
+st.markdown("""
+Bem-vindo ao SIGMA-Q V2.
+
+Utilize o menu lateral para navegar entre:
+- Visão Geral
+- Análises por Modelo
+- Mapa de Causas
+- Classificação Automática (IA)
+""")
+
+st.markdown("---")
+st.caption("© 2025 - SIGMA-Q • Mondial Eletrodomésticos")

@@ -68,7 +68,7 @@ def embed_batch(texts: List[str], model=None) -> np.ndarray:
 # 3) TF-IDF (estatístico)
 # ============================================================
 
-def gerar_tfidf(texts: List[str]) -> (TfidfVectorizer, np.ndarray):
+def gerar_tfidf(texts: List[str]) -> tuple[TfidfVectorizer, np.ndarray]:
     """
     Gera matriz TF-IDF para uma lista de textos normalizados.
 
