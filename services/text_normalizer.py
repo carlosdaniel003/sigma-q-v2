@@ -1,67 +1,72 @@
-"""
-services/text_normalizer.py
-Responsável por:
-- Normalização técnica
-- Redução de termos técnicos ao padrão único
-- Correções de sinônimos industriais
-"""
+# [BLOCK 1]
+# services/text_normalizer.py
+# Normalizador conservador — NÃO remove stopwords.
+# - Remove acentos
+# - Substitui pontuação por espaços
+# - Condensa espaços
+# - Troca espaços por underscore
+# - Retorna MAIÚSCULAS (compatível com pipeline atual)
 
 import re
-import pandas as pd
-from services.text_cleaner import clean_text
+import unicodedata
+from typing import List, Optional
 
+def _remover_acentos(text: str) -> str:
+    """Remove acentos mantendo caracteres base (á -> a)."""
+    if not isinstance(text, str):
+        return ""
+    nfkd = unicodedata.normalize("NFKD", text)
+    return "".join([c for c in nfkd if not unicodedata.combining(c)])
 
-# Dicionário técnico definido com base no seu conhecimento da fábrica
-DICIONARIO_TECNICO = {
-
-    # 🎯 Sintomas
-    r"\bNAO LIGA\b": "SEM_LIGACAO",
-    r"\bAPARELHO NAO LIGA\b": "SEM_LIGACAO",
-    r"\bSEM TENSAO\b": "SEM_LIGACAO",
-    r"\bSEM IMAGEM\b": "SEM_IMAGEM",
-
-    # 🎯 LED
-    r"\bLED NAO ACENDE\b": "LED_APAGADO",
-    r"\bLED NAO FUNCIONA\b": "LED_APAGADO",
-
-    # 🎯 Áudio
-    r"\bSEM AUDIO\b": "SEM_AUDIO",
-    r"\bRUIDO NO AUDIO\b": "RUIDO_AUDIO",
-
-    # 🎯 HDMI
-    r"\bHDMI\b": "HDMI_ERRO",
-
-    # 🎯 USB
-    r"\bUSB\b": "USB_ERRO",
-
-    # 🎯 Backlight TV
-    r"\bBACKLIGHT\b": "BACKLIGHT_ERRO",
-
-    # 🎯 Componentes padronizados
-    r"\bTRANSISTOR SMD\b": "TRANSISTOR",
-    r"\bCAPACITOR CERAMICO\b": "CAPACITOR",
-    r"\bRESISTOR SMD\b": "RESISTOR",
-}
-
-
-def aplicar_dicionario_tecnico(texto: str) -> str:
-    """Aplica todas as regras regulares do dicionário técnico."""
-    for padrao, substituto in DICIONARIO_TECNICO.items():
-        texto = re.sub(padrao, substituto, texto)
-    return texto
-
-
-def normalizar_texto(texto: str) -> str:
+def _limpar_pontuacao(text: str) -> str:
     """
-    Pipeline de normalização técnica.
-
-    1) Limpeza básica (text_cleaner)
-    2) Normalização industrial
+    Substitui qualquer caracter que não seja letra, número ou underscore por espaço.
+    Mantemos números e palavras curtas — não removemos stopwords.
     """
-    if pd.isna(texto):
+    # \w equivale a [a-zA-Z0-9_], usamos re.UNICODE para segurança internacional
+    return re.sub(r"[^\w\s]", " ", text, flags=re.UNICODE)
+
+def normalizar_texto(text: Optional[str]) -> str:
+    """
+    Normaliza um único texto:
+    - converte None -> ""
+    - remove acentos
+    - remove pontuação (substitui por espaço)
+    - condensa espaços
+    - substitui espaços por underscore
+    - remove underscores duplicados
+    - converte para MAIÚSCULAS
+    """
+    if text is None:
         return ""
 
-    texto = clean_text(texto)
-    texto = aplicar_dicionario_tecnico(texto)
+    # garantir string
+    s = str(text)
 
-    return texto
+    # 1) strip externo
+    s = s.strip()
+
+    # 2) remover acentos
+    s = _remover_acentos(s)
+
+    # 3) substituir pontuação por espaço (mantém numeros e letras)
+    s = _limpar_pontuacao(s)
+
+    # 4) normalizar espaços (multiespaços -> single space)
+    s = re.sub(r"\s+", " ", s).strip()
+
+    if s == "":
+        return ""
+
+    # 5) transformar espaços em underscore e remover underscores duplicados
+    s = s.replace(" ", "_")
+    s = re.sub(r"_+", "_", s)
+
+    # 6) tornar maiúsculo (consistência com pipeline existente)
+    return s.upper()
+
+def normalizar_batch(texts: List[Optional[str]]) -> List[str]:
+    """Normaliza uma lista de textos (útil em pipelines)."""
+    return [normalizar_texto(t) for t in texts]
+
+# Fim do BLOCK 1

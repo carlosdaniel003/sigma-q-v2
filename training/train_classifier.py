@@ -1,112 +1,112 @@
-# training/train_classifier.py
-# SIGMA-Q V2 — Fase 3 (corrigido)
+# ---------- BLOCO 2 (training/train_classifier.py) ----------
+"""
+Script de treino do classificador (scikit-learn).
+Regras:
+- Se uma classe tiver apenas 1 amostra, removemos essas classes do conjunto de treino
+  (pois train_test_split com stratify exige >=2 por classe).
+- Treinador gera:
+    - models/tfidf_vectorizer_v1.joblib
+    - models/classifier_v1.joblib
+- Usa LogisticRegression (leve, determinístico)
+"""
+import logging
+from pathlib import Path
+from collections import Counter
 
-import os
 import joblib
 import pandas as pd
-from datetime import datetime
-from sklearn.svm import LinearSVC
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
-import logging
+from sklearn.metrics import f1_score, accuracy_score
 
-from config.config import PATH_DATA_PROCESSED, PATH_MODELS, PATH_SPACY_MODEL
-from utils.metrics import compute_metrics
-from utils.checksum import generate_sha256
+from services.text_normalizer import normalizar_texto
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(levelname)s — %(message)s")
-logger = logging.getLogger(__name__)
+LOG = logging.getLogger("train")
+logging.basicConfig(level=logging.INFO)
+
+BASE_DIR = Path(__file__).resolve().parents[1]
+MODELS_DIR = BASE_DIR / "models"
+MODELS_DIR.mkdir(parents=True, exist_ok=True)
+
+TFIDF_PATH = MODELS_DIR / "tfidf_vectorizer_v1.joblib"
+CLASSIFIER_PATH = MODELS_DIR / "classifier_v1.joblib"
 
 
-def carregar_base():
-    path = PATH_DATA_PROCESSED / "texto_processado.parquet"
-    df = pd.read_parquet(path)
-
-    # Remover entradas sem texto
-    df = df.dropna(subset=["TEXTO_NORMALIZADO"])
-
-    # Remover NaN real
-    df = df.dropna(subset=["COD_FALHA_CORR"])
-
-    # Remover string 'nan'
-    df = df[df["COD_FALHA_CORR"].astype(str).str.upper() != "NAN"]
-
-    # Filtrar classes com pelo menos 2 ocorrências
-    contagem = df["COD_FALHA_CORR"].value_counts()
-    classes_validas = contagem[contagem >= 2].index
-    df = df[df["COD_FALHA_CORR"].isin(classes_validas)]
-
-    logger.info(f"Base após filtragem: {df.shape[0]} linhas, {len(classes_validas)} classes válidas")
+def carregar_base_oficial(path: Path):
+    LOG.info(f"Carregando base oficial: {path}")
+    df = pd.read_excel(path)
     return df
 
 
-def carregar_tfidf():
-    path_vec = PATH_SPACY_MODEL / "tfidf_vectorizer.pkl"
-    vectorizer = joblib.load(path_vec)
-    return vectorizer
+def preparar_dataset(df: pd.DataFrame, texto_col: str = "DESC_FALHA", label_col: str = "COD_FALHA"):
+    # renomeios mínimos (se necessário)
+    renomear = {
+        "DESC. FALHA": "DESC_FALHA",
+        "DESC. COMPONENTE": "DESC_COMPONENTE",
+        "DESC. MOTIVO": "DESC_MOTIVO",
+        "REGISTRADO POR": "REGISTRADO_POR"
+    }
+    df = df.rename(columns=renomear)
+
+    # remover linhas sem label
+    df = df.dropna(subset=[label_col, texto_col])
+    # criar coluna de texto normalizado
+    df["TEXTO_NORMALIZADO"] = df[texto_col].astype(str).apply(normalizar_texto)
+
+    # contar classes
+    cnt = Counter(df[label_col].astype(str).tolist())
+
+    # filtrar classes com 2+ amostras (necessário para stratify)
+    valid_classes = {k for k, v in cnt.items() if v >= 2}
+    LOG.info(f"Classes totais antes: {len(cnt)}; classes com >=2 amostras: {len(valid_classes)}")
+
+    df = df[df[label_col].astype(str).isin(valid_classes)].reset_index(drop=True)
+    return df
 
 
-def preparar_features(df, vectorizer):
-    X = vectorizer.transform(df["TEXTO_NORMALIZADO"])
-    y = df["COD_FALHA_CORR"].astype(str)
-    return X, y
+def train_and_persist(path_raw: Path, texto_col: str = "DESC_FALHA", label_col: str = "COD_FALHA"):
+    df = carregar_base_oficial(path_raw)
+    df = preparar_dataset(df, texto_col=texto_col, label_col=label_col)
 
+    if df.shape[0] == 0:
+        LOG.info("[TRAIN] Nenhum dado válido para treinar após filtro de classes.")
+        return
 
-def treinar_baseline(X_train, y_train):
-    model = LinearSVC()
-    model.fit(X_train, y_train)
-    return model
+    X_text = df["TEXTO_NORMALIZADO"].tolist()
+    y = df[label_col].astype(str).tolist()
 
+    # Treino TF-IDF
+    vectorizer = TfidfVectorizer(lowercase=True, ngram_range=(1, 2), min_df=1)
+    X = vectorizer.fit_transform(X_text)
 
-def salvar_modelo(model, vectorizer):
-    PATH_MODELS.mkdir(exist_ok=True)
+    # Split (estratificado)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, stratify=y, random_state=42)
 
-    joblib.dump(model, PATH_MODELS / "classifier_v1.joblib")
-    joblib.dump(vectorizer, PATH_MODELS / "tfidf_vectorizer_v1.joblib")
+    # Modelo simples e efetivo
+    clf = LogisticRegression(max_iter=2000, class_weight="balanced", solver="lbfgs")
+    clf.fit(X_train, y_train)
 
-    sha = generate_sha256(PATH_MODELS / "classifier_v1.joblib")
-    with open(PATH_MODELS / "classifier_v1.sha256", "w") as f:
-        f.write(sha)
+    # Avaliação
+    y_pred = clf.predict(X_test)
+    f1 = f1_score(y_test, y_pred, average="macro")
+    acc = accuracy_score(y_test, y_pred)
 
+    LOG.info(f"[TRAIN] Treino concluído. F1-macro: {f1:.4f}  Acc: {acc:.4f}")
 
-def registrar_versao(metrics):
-    entry = f"""
-## Modelo classifier_v1 — {datetime.now().strftime("%d/%m/%Y %H:%M")}
+    # Persistência
+    joblib.dump(vectorizer, TFIDF_PATH)
+    joblib.dump(clf, CLASSIFIER_PATH)
+    LOG.info(f"[TRAIN] Modelos salvos em: {TFIDF_PATH} e {CLASSIFIER_PATH}")
 
-- Target: COD_FALHA_CORR
-- Texto: TEXTO_NORMALIZADO
-- F1-Macro: {metrics['f1_macro']:.4f}
-- Acurácia: {metrics['accuracy']:.4f}
-- Precisão: {metrics['precision_macro']:.4f}
-- Recall: {metrics['recall_macro']:.4f}
-
-------------------------------------------
-"""
-    with open(PATH_MODELS / "VERSIONS.md", "a", encoding="utf-8") as f:
-        f.write(entry)
-
-
-def main():
-    logger.info("===== INICIANDO TREINO FASE 3 =====")
-
-    df = carregar_base()
-    vectorizer = carregar_tfidf()
-    X, y = preparar_features(df, vectorizer)
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.20, stratify=y, random_state=42
-    )
-
-    model = treinar_baseline(X_train, y_train)
-
-    y_pred = model.predict(X_test)
-    metrics = compute_metrics(y_test, y_pred)
-    logger.info(f"F1-Macro: {metrics['f1_macro']:.4f}")
-
-    salvar_modelo(model, vectorizer)
-    registrar_versao(metrics)
-
-    logger.info("===== FIM DO TREINO =====")
+    return {
+        "f1_macro": float(f1),
+        "accuracy": float(acc),
+        "n_samples": len(y)
+    }
 
 
 if __name__ == "__main__":
-    main()
+    RAW = BASE_DIR / "data" / "raw" / "base_de_dados_defeitos.xlsx"
+    train_and_persist(RAW)
+# ---------- FIM BLOCO 2 ----------
