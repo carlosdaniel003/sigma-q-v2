@@ -43,10 +43,9 @@ st.markdown("""
 Bem-vindo ao SIGMA-Q V2.
 
 Utilize o menu lateral para navegar entre:
-- Visão Geral
-- Análises por Modelo
-- Mapa de Causas
-- Classificação Automática (IA)
+- Classificação de Defeitos
+- Catálogo Oficial de Defeitos
+- Prod vs Defeitos
 """)
 
 st.markdown("---")
