@@ -43,9 +43,10 @@ st.markdown("""
 Bem-vindo ao SIGMA-Q V2.
 
 Utilize o menu lateral para navegar entre:
+- Catalogo Oficial SIGMA-Q
 - Classificação de Defeitos
-- Catálogo Oficial de Defeitos
-- Prod vs Defeitos
+- Classificação de Produção
+- PPM ENGINE
 """)
 
 st.markdown("---")
