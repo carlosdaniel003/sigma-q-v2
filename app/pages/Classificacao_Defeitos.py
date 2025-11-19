@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
-from services.classifier_service import ClassifierService
+from app.core.classifier_service import ClassifierService
 from services.text_normalizer import normalizar_texto
 from services.lexicon import load_lexicon
+from app.core.defects_engine import gerar_resumo_defeitos
 
 st.set_page_config(
     page_title="Classificação Automática — SIGMA-Q",
@@ -91,3 +92,7 @@ else:
         use_container_width=True,
         height=500
     )
+
+st.subheader("📘 Validação - Quantidade de defeitos por modelo")
+df_resumo = gerar_resumo_defeitos()
+st.dataframe(df_resumo, use_container_width=True)

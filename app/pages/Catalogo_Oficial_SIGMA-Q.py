@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 
 st.set_page_config(page_title="Catálogo Oficial de Defeitos", layout="wide")
-st.title("📚 Catálogo Oficial SIGMA-Q — Defeitos, Responsabilidades e Causas")
+st.title("📚 Catálogo Oficial SIGMA-Q — Defeitos, Responsabilidades, Causas e Modelos")
 
 # =============================================================
 # Carregar planilhas oficiais
@@ -14,9 +14,10 @@ def carregar_catalogo():
     df_codes = pd.read_excel("data/raw/catalogo_codigos_defeitos.xlsx")
     df_resp = pd.read_excel("data/raw/catalogo_responsabilidades.xlsx")
     df_causa = pd.read_excel("data/raw/catalogo_causas.xlsx")
-    return df_codes, df_resp, df_causa
+    df_model = pd.read_excel("data/raw/catalogo_modelos.xlsx")
+    return df_codes, df_resp, df_causa, df_model
 
-df_codes, df_resp, df_causa = carregar_catalogo()
+df_codes, df_resp, df_causa, df_model = carregar_catalogo()
 
 # =============================================================
 # Exibição
@@ -29,5 +30,8 @@ st.dataframe(df_resp, use_container_width=True)
 
 st.header("📌 3. Catálogo de Causas")
 st.dataframe(df_causa, use_container_width=True)
+
+st.header("📦 4. Catálogo de Modelos")
+st.dataframe(df_model, use_container_width=True)
 
 st.info("Esses catálogos são a base oficial de aprendizagem do SIGMA-Q IA.")
