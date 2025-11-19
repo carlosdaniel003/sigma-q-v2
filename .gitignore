@@ -1,42 +1,7 @@
 # -------------------------------------
-# Python / Cache
-# -------------------------------------
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# -------------------------------------
-# Streamlit
-# -------------------------------------
-app/.streamlit/
-logs/
-
-# -------------------------------------
-# Dados e bases sensíveis
-# -------------------------------------
-data/raw/
-data/logs/
-data/processed/*.parquet
-
-# -------------------------------------
-# Modelos grandes e vetores
-# -------------------------------------
-models/
-model/spacy model/embeddings.npy
-model/spacy model/tfidf_matrix.npy
-model/spacy model/tfidf_vectorizer.pkl
-
-# -------------------------------------
 # Ambiente virtual
 # -------------------------------------
 .venv/
 venv/
 env/
 *.env
-
-# -------------------------------------
-# IDE files
-# -------------------------------------
-.vscode/
-.idea/
